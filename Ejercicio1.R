@@ -1,32 +1,42 @@
+#Lectura de librerías
 library(ISLR)
-data(Credit)
+library(corrplot)
+library(pls)
 
-#https://cran.r-project.org/web/packages/ISLR/ISLR.pdf
-Credit <- subset(Credit, select = -c(ID))
 
-attach(Credit)
+#Lectura de datos
+data(College)
 
-# Definicion Balance:
-#--The balance in your bank account is the amount of money you have in it.
-#--Cantidad de dinero que tiene una persona en su cuenta bancaria
+#Validacion cruzada
+set.seed(123)
+size = ceiling(nrow(College)*0.8)
+training = sample(1:nrow(College), size)
+test = which(!1:nrow(College) %in% training)
 
-## Preprocesamiento basico
-Cards <- as.factor(Cards)
-Education <- as.factor(Education)
+#Graficas descriptivas
+cor = cor(training[2:18])
+corrplot(cor)
 
-## Varibles categoricas
-#plot(Gender, Balance)
-plot(Student, Balance) # Se observa desbalanceo en los datos
-#plot(Married, Balance)
-#plot(Ethnicity, Balance)
-#plot(Education, Balance)
+#Ajuste modelo PLS
+pls.fit <- plsr(formula = Apps ~ .,
+                data = College,
+                subset = training,
+                scale = TRUE,
+                validation = 'CV')
 
-barplot(Cards)
-barplot(Education)
+#Grafica de validacion
+validationplot(pls.fit, val.type = 'RMSEP')
 
-## Variables numericas
-plot(Income, Balance)
-plot(Limit, Balance) # Relacion obvia
-plot(Rating, Balance)
-plot(Age)
+#Error de test:
 
+#Ajuste modelo PCR
+pcr.fit <- pcr(formula = Apps ~ .,
+                data = College,
+                subset = training,
+                scale = TRUE,
+                validation = 'CV')
+
+#Grafica de validacion
+validationplot(pcr.fit, val.type = 'RMSEP')
+
+#Error de test:

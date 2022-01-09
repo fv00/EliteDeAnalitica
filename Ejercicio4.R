@@ -1,18 +1,32 @@
-#Lectura de librerías
 library(ISLR)
-library(corrplot)
+data(Credit)
 
-#Lectura de datos
-data(College)
+#https://cran.r-project.org/web/packages/ISLR/ISLR.pdf
+Credit <- subset(Credit, select = -c(ID))
 
-#Validacion cruzada
-set.seed(123)
-size = ceiling(nrow(College)*0.8)
-training = sample(1:nrow(College), size)
-test = College[!1:nrow(College) %in% training,]
-training = College[training,]
+attach(Credit)
 
-#Graficas descriptivas
-cor = cor(training[2:18])
-corrplot(cor)
-plot(PhD)
+# Definicion Balance:
+#--The balance in your bank account is the amount of money you have in it.
+#--Cantidad de dinero que tiene una persona en su cuenta bancaria
+
+## Preprocesamiento basico
+Cards <- as.factor(Cards)
+Education <- as.factor(Education)
+
+## Varibles categoricas
+#plot(Gender, Balance)
+plot(Student, Balance) # Se observa desbalanceo en los datos
+#plot(Married, Balance)
+#plot(Ethnicity, Balance)
+#plot(Education, Balance)
+
+barplot(Cards)
+barplot(Education)
+
+## Variables numericas
+plot(Income, Balance)
+plot(Limit, Balance) # Relacion obvia
+plot(Rating, Balance)
+plot(Age)
+

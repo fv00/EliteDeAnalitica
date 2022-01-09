@@ -1,0 +1,17 @@
+```{r}
+#Lectura de librerias:
+library(ISLR)
+library(corrplot)
+```
+
+```{r}
+#Lectura y preprocesamiento de datos:
+data(College)
+#Preprocesamiento para analisis descriptivo:
+cor = cor(College[2:18])
+```
+
+```{r}
+corrplot(cor)
+```
+
