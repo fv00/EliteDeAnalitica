@@ -152,24 +152,24 @@ barplot(table(Credit[training, 'Education']))
 
 ```{r}
 #Modelamiento:
-#Balance en base a las covariables sin usar splines
-mod_gam1 <- gam(Balance ~ Limit + Rating +  Student + Education,
+#Balance en base a las covariables usando loess en una covariable
+mod_gam1 <- gam(Balance ~ lo(Limit),
                 data = Credit,
                 subset = training)
-#Balance en base a las covariables usasndo splines en una covariable
-mod_gam2 <- gam(Balance ~ s(Limit) + s(Rating) + Student + Education,
+#Balance en base a las covariables usando splines y loess en las covariables
+mod_gam2 <- gam(Balance ~ lo(Limit) + s(Rating),
                 data = Credit,
                 subset = training)
-#Balance en base a las covariables usando loess
-mod_gam3 <- gam(Balance ~ lo(Limit) + lo(Rating) + Education + Student,
+#Balance en base a las covariables usando loess, splines y anadiendo una variable categorica
+mod_gam3 <- gam(Balance ~ lo(Limit) + s(Rating) + Student,
                 data = Credit,
                 subset = training)
 #Balance en base a las covariables usando loess y splines
-mod_gam4 <- gam(Balance ~ s(Limit) + lo(Rating) + Education + Student,
+mod_gam4 <- gam(Balance ~ lo(Limit) + s(Rating) + Student + Education,
                 data = Credit,
                 subset = training)
 ```
-
+Se plantean 4 modelos gam por medio de un análisis de varianza de modelos anidados, en este buscamos comparar
 ```{r}
 anova(mod_gam1, mod_gam2,mod_gam3, mod_gam4, test = 'F')
 ```
@@ -187,8 +187,13 @@ errores4 <- mean((Credit[test, 'Balance'] - errores4)^2)
 ```
 
 ```{r}
+summary(mod_gam3)
+```
+
+
+```{r}
 kable(data.frame(errores1, errores2, errores3, errores4))
 ```
 
-Según la validación cruzada el modelo que arroja el menor error en el conjunto de prueba es el modelo 3 en dónde se aplica loess a las dos variables númericas regresoras pertenecientes al conjunto de datos de prueba, esto posiblemente se deba a que al suavizar el conjunto de variables se mejore el ajuste sacrificando interpretabilidad en el conjunto de datos.
+Según la validación cruzada el modelo que arroja el menor error en el conjunto de prueba es el modelo 3 en dónde se aplica loess la variable y splines a la variable en el conjunto de datos de prueba, esto posiblemente se deba a que al suavizar el conjunto de variables se mejore el ajuste sacrificando interpretabilidad en el conjunto de datos y que cómo se observa de manera gráfica.
 
