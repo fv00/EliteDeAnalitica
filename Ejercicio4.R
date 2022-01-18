@@ -58,4 +58,4 @@ mod_gam4 <- gam(Balance ~ s(Limit) + lo(Rating),
                 data = Credit,
                 subset = training)
 
-#Familia de modelos gamma
+#Familia de modelos gamma   

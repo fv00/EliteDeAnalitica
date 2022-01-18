@@ -1,0 +1,194 @@
+---
+title: "Taller 2 Introducción analítica"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Lectura de librerías
+library(ISLR)
+library(corrplot)
+library(pls)
+library(gam)
+library(knitr)
+library(ggplot2)
+```
+## Ejercicio 1
+
+Se leen los datos:
+```{r}
+data(College)
+```
+
+Se realiza validación cruzada:
+```{r}
+#Validacion cruzada
+set.seed(123)
+size = ceiling(nrow(College)*0.8)
+training = sample(1:nrow(College), size)
+test = which(!1:nrow(College) %in% training)
+```
+
+En este caso se plantea el modelo de regresión con todas las variables que incluye la base de datos, realizando además validación cruzada:
+```{r}
+set.seed(123)
+#Ajuste modelo PLS
+pls.fit <- plsr(formula = Apps ~ .,
+                data = College[2:18],
+                subset = training,
+                scale = TRUE,
+                validation = 'CV')
+```
+
+Se construye una gráfica de validación en el que elegimos el 'codo' en dónde deja de reducir considerablemente el error:
+
+```{r}
+#Grafica de validacion
+validationplot(pls.fit, val.type = 'RMSEP')
+abline(v=3)
+```
+En base a la gráfica nos quedamos con el modelo con 3 componentes.
+
+Se realiza el mismo procedimiento mediante el modelo de regresión por componentes principales:
+```{r}
+set.seed(123)
+#Ajuste modelo PCR
+pcr.fit <- pcr(formula = Apps ~ .,
+                data = College[2:18],
+                subset = training,
+                scale = TRUE,
+                validation = 'CV')
+```
+
+
+```{r}
+#Grafica de validacion
+validationplot(pcr.fit, val.type = 'RMSEP')
+abline(v=2)
+```
+A partir de la anterior gráfica se elije el modelo con dos componentes principales.
+
+Se realiza el ajuste de los dos modelos propuestos y se cálcula su error en los datos de prueba:
+```{r}
+#Modelo PCR
+ajuste_pcr <- predict(pcr.fit, College[test, 2:18], ncomp = 3)
+PCR <- mean((ajuste_pcr-College[test, 'Apps'])^2)
+#Modelo PLS
+ajuste_pls <- predict(pls.fit, College[test, 2:18], ncomp = 2)
+PLS <- mean((ajuste_pls-College[test, 'Apps'])^2)
+```
+
+```{r}
+kable(t(c(PCR, PLS)), col.names = c('PCR', 'PLS'))
+```
+De acuerdo a la validación cruzada el mejor modelo es aquel compuesto por la regresión lineal parcial.
+
+#Ejercicio 4:
+
+Se realiza un análisis descriptivo ligero para hallar las posibles variables regresoras de los modelos a plantear:
+
+```{r}
+#Lectura de datos
+data(Credit)
+```
+
+Se crean los conjuntos de entrenamiento y prueba para la validación cruzada:
+```{r}
+#Validacion cruzada
+set.seed(123)
+size = ceiling(nrow(Credit)*0.8)
+training = sample(1:nrow(Credit), size)
+test = which(!1:nrow(Credit) %in% training)
+
+```
+
+Se observa ligeramente el comportamiento de la variable respuesta:
+
+```{r}
+#Adicionalmente se separa la variable respuesta:
+y_train <- Credit[training, 'Balance']
+#Distribucion variable respuesta:
+hist(y_train)
+```
+
+Se plantean histogramas mediante la función pairs para observar el cambio en la variable respuesta respecto a las variables númericas en los datos de prueba.
+
+```{r}
+#Diagramas de dispersion:
+pairs(Credit[training, c(2:6, 12)])
+```
+
+De la gráfica anterior se observa que hay un par de variables altamente correlacionadas con el balance.
+
+Se plantea una gráfica de correlaciones para observar la correlación entre el Balance y las demás variables númericas del conjunto de datos de prueba:
+
+```{r}
+#Grafica de correlacion:
+cor <- cor(Credit[training, c(2:6, 12)])
+corrplot::corrplot(cor, method = c('number'))
+```
+De manera rápida se eligen aquellas variables cuya correlación con la variable respuesta es de 0.8 o más cómo las variables regresoras del modelo.
+
+Se plantean diagramas de cajas y bigotes para encontrar relaciones entre la variable respuesta y las variables categóricas en el conjunto de datos de prueba:
+```{r}
+#Boxplots:
+par(mfrow = c(2,2))
+
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Education'])
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Married'])
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Ethnicity'])
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Student'])
+```
+
+```{r}
+par(mfrow = c(1,2))
+barplot(table(Credit[training, 'Student']))
+barplot(table(Credit[training, 'Education']))
+```
+
+
+```{r}
+#Modelamiento:
+#Balance en base a las covariables sin usar splines
+mod_gam1 <- gam(Balance ~ Limit + Rating +  Student + Education,
+                data = Credit,
+                subset = training)
+#Balance en base a las covariables usasndo splines en una covariable
+mod_gam2 <- gam(Balance ~ s(Limit) + s(Rating) + Student + Education,
+                data = Credit,
+                subset = training)
+#Balance en base a las covariables usando loess
+mod_gam3 <- gam(Balance ~ lo(Limit) + lo(Rating) + Education + Student,
+                data = Credit,
+                subset = training)
+#Balance en base a las covariables usando loess y splines
+mod_gam4 <- gam(Balance ~ s(Limit) + lo(Rating) + Education + Student,
+                data = Credit,
+                subset = training)
+```
+
+```{r}
+anova(mod_gam1, mod_gam2,mod_gam3, mod_gam4, test = 'F')
+```
+
+```{r}
+errores1 <- predict(mod_gam1, Credit[test, c('Limit', 'Rating', 'Student', 'Education')])
+errores2 <- predict(mod_gam2, Credit[test, c('Limit', 'Rating', 'Student', 'Education')])
+errores3 <- predict(mod_gam3, Credit[test, c('Limit', 'Rating', 'Student', 'Education')])
+errores4 <- predict(mod_gam4, Credit[test, c('Limit', 'Rating', 'Student', 'Education')])
+
+errores1 <- mean((Credit[test, 'Balance'] - errores1)^2)
+errores2 <- mean((Credit[test, 'Balance'] - errores2)^2)
+errores3 <- mean((Credit[test, 'Balance'] - errores3)^2)
+errores4 <- mean((Credit[test, 'Balance'] - errores4)^2)
+```
+
+```{r}
+kable(data.frame(errores1, errores2, errores3, errores4))
+```
+
+Según la validación cruzada el modelo que arroja el menor error en el conjunto de prueba es el modelo 3 en dónde se aplica loess a las dos variables númericas regresoras pertenecientes al conjunto de datos de prueba, esto posiblemente se deba a que al suavizar el conjunto de variables se mejore el ajuste sacrificando interpretabilidad en el conjunto de datos.
+
