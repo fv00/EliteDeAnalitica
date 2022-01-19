@@ -134,6 +134,7 @@ y_train <- Credit[training, 'Balance']
 #Distribucion variable respuesta:
 hist(y_train, main ='Histograma de la variable respuesta', xlab = '')
 ```
+Pese a que al gráficar la variable respuesta hay indicios de alguna otra distribución o posible necesidad de aplicar una transformación, para este caso se trabajará con la función link por default de la función gam.
 
 Se plantean histogramas mediante la función pairs para observar el cambio en la variable respuesta respecto a las variables númericas en los datos de prueba.
 
