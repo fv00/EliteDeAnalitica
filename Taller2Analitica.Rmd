@@ -4,7 +4,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 ```{r}
@@ -15,15 +15,20 @@ library(pls)
 library(gam)
 library(knitr)
 library(ggplot2)
+library(pander)
 ```
+
 ## Ejercicio 1
 
-Se leen los datos:
-```{r}
+Se busca predecir el número de solicitudes recibidas en una universidad.
+
+```{r, echo=FALSE}
 data(College)
 ```
 
-Se realiza validación cruzada:
+### Validacion cruzada:
+
+Se particionan los datos en un conjunto de entrenamiento y otro de validación:
 ```{r}
 #Validacion cruzada
 set.seed(123)
@@ -32,6 +37,41 @@ training = sample(1:nrow(College), size)
 test = which(!1:nrow(College) %in% training)
 ```
 
+### Ajuste de modelo PCR:
+
+Se plantea un modelo de regresión por componentes principales en donde se incluyen todas las variables númericas de la base de datos:
+
+```{r}
+set.seed(123)
+#Ajuste modelo PCR
+pcr.fit <- pcr(formula = Apps ~ .,
+                data = College[2:18],
+                subset = training,
+                scale = TRUE,
+                validation = 'CV')
+```
+
+Se realiza una gráfica de validación para seleccionar mediante validación cruzada el número M de componentes principales a incluir en el modelo:
+
+```{r}
+#Grafica de validacion
+validationplot(pcr.fit, val.type = 'RMSEP')
+abline(v=2)
+```
+
+A partir de la anterior gráfica se elije el modelo con dos componentes principales.
+
+Se cálcula el error de test obtenido con el M seleccionado de 2:
+
+```{r}
+#Modelo PCR
+ajuste_pcr <- predict(pcr.fit, College[test, 2:18], ncomp = 2)
+PCR <- mean((ajuste_pcr-College[test, 'Apps'])^2)
+```
+
+Se obtiene que el error de test para el modelo con 2 componentes principales es de `r PCR`.
+
+### Ajuste de modelo PLS:
 En este caso se plantea el modelo de regresión con todas las variables que incluye la base de datos, realizando además validación cruzada:
 ```{r}
 set.seed(123)
@@ -43,7 +83,7 @@ pls.fit <- plsr(formula = Apps ~ .,
                 validation = 'CV')
 ```
 
-Se construye una gráfica de validación en el que elegimos el 'codo' en dónde deja de reducir considerablemente el error:
+Se selecciona el nùmero de componentes a través de validación cruzada:
 
 ```{r}
 #Grafica de validacion
@@ -52,45 +92,26 @@ abline(v=3)
 ```
 En base a la gráfica nos quedamos con el modelo con 3 componentes.
 
-Se realiza el mismo procedimiento mediante el modelo de regresión por componentes principales:
-```{r}
-set.seed(123)
-#Ajuste modelo PCR
-pcr.fit <- pcr(formula = Apps ~ .,
-                data = College[2:18],
-                subset = training,
-                scale = TRUE,
-                validation = 'CV')
-```
-
+Se ajusta el modelo a los datos de prueba y se cálcula su error:
 
 ```{r}
-#Grafica de validacion
-validationplot(pcr.fit, val.type = 'RMSEP')
-abline(v=2)
-```
-A partir de la anterior gráfica se elije el modelo con dos componentes principales.
-
-Se realiza el ajuste de los dos modelos propuestos y se cálcula su error en los datos de prueba:
-```{r}
-#Modelo PCR
-ajuste_pcr <- predict(pcr.fit, College[test, 2:18], ncomp = 3)
-PCR <- mean((ajuste_pcr-College[test, 'Apps'])^2)
 #Modelo PLS
-ajuste_pls <- predict(pls.fit, College[test, 2:18], ncomp = 2)
+ajuste_pls <- predict(pls.fit, College[test, 2:18], ncomp = 3)
 PLS <- mean((ajuste_pls-College[test, 'Apps'])^2)
 ```
+
+En este caso se obtiene que el error de test para el modelo con 3 componentes es de `r PLS`.
 
 ```{r}
 kable(t(c(PCR, PLS)), col.names = c('PCR', 'PLS'))
 ```
-De acuerdo a la validación cruzada el mejor modelo es aquel compuesto por la regresión lineal parcial.
+De acuerdo a la validación cruzada el modelo que muestra mejores resultados es aquel compuesto por la regresión lineal parcial.
 
-#Ejercicio 4:
+## Ejercicio 4:
 
 Se realiza un análisis descriptivo ligero para hallar las posibles variables regresoras de los modelos a plantear:
 
-```{r}
+```{r, echo=FALSE}
 #Lectura de datos
 data(Credit)
 ```
@@ -111,7 +132,7 @@ Se observa ligeramente el comportamiento de la variable respuesta:
 #Adicionalmente se separa la variable respuesta:
 y_train <- Credit[training, 'Balance']
 #Distribucion variable respuesta:
-hist(y_train)
+hist(y_train, main ='Histograma de la variable respuesta', xlab = '')
 ```
 
 Se plantean histogramas mediante la función pairs para observar el cambio en la variable respuesta respecto a las variables númericas en los datos de prueba.
@@ -130,25 +151,42 @@ Se plantea una gráfica de correlaciones para observar la correlación entre el 
 cor <- cor(Credit[training, c(2:6, 12)])
 corrplot::corrplot(cor, method = c('number'))
 ```
-De manera rápida se eligen aquellas variables cuya correlación con la variable respuesta es de 0.8 o más cómo las variables regresoras del modelo.
+De manera rápida se eligen aquellas variables cuya correlación con la variable respuesta es de 0.8 o más cómo las variables regresoras del modelo, estas variables son el límite crediticio y el puntaje crediticio.
 
 Se plantean diagramas de cajas y bigotes para encontrar relaciones entre la variable respuesta y las variables categóricas en el conjunto de datos de prueba:
 ```{r}
 #Boxplots:
 par(mfrow = c(2,2))
 
-boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Education'])
-boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Married'])
-boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Ethnicity'])
-boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Student'])
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Education'],
+        ylab='', xlab='', main = 'Boxplot de educación contra Balance')
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Married'],
+        ylab='', xlab='', main = 'Boxplot de Matrimonio contra Balance')
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Ethnicity'],
+        ylab='', xlab='', main = 'Boxplot de etnicidad contra Balance')
+boxplot(Credit[training, 'Balance'] ~ Credit[training, 'Student'],
+        ylab='', xlab='', main = 'Boxplot de Estudiante contra Balance')
 ```
+En los diagramas de cajas y bigotes se puede observar que las variables categóricas en las que a priori se relacionen con el valor del balance son la variable Estudiante y la variable años de educación.
 
+Se construye un par de gráficas de barras para evaluar el balanceo en estas variables:
 ```{r}
 par(mfrow = c(1,2))
-barplot(table(Credit[training, 'Student']))
-barplot(table(Credit[training, 'Education']))
+barplot(table(Credit[training, 'Student']), main = 'Barplot de estudiante')
+barplot(table(Credit[training, 'Education']), main = 'Barplot de años de educación')
 ```
+Se observa desbalanceo en la variable estudiante, para este caso este desbalanceo no es tratado ya que se asume que la naturaleza de los datos permite justificar la inclusión de esta variable cómo característica en los futuros modelos.
 
+Finalmente se seleccionan las siguientes variables para modelar el Balance en la base de datos:
+
+* Puntaje crediticio
+* Limite crediticio
+* Años de estudio
+* Condición de estudiante (Estudiante o no estudiante)
+
+### Construcción de análisis de varianza de modelos anidados:
+
+Se plantean 4 modelos gam con los cuales se busca modelar el Balance crediticio en un análisis de varianza de modelos anidados, se incluyen poco a poco variables buscando que al disminuir los grados de libertad mediante el modelo anterior incluyendo nuevas características se obtenga una mejora significativa en el ajuste de los datos:
 
 ```{r}
 #Modelamiento:
@@ -168,11 +206,11 @@ mod_gam3 <- gam(Balance ~ lo(Limit) + s(Rating) + Student,
 mod_gam4 <- gam(Balance ~ lo(Limit) + s(Rating) + Student + Education,
                 data = Credit,
                 subset = training)
+
+pander::pander(anova(mod_gam1, mod_gam2,mod_gam3, mod_gam4, test = 'F'))
 ```
-Se plantean 4 modelos gam por medio de un análisis de varianza de modelos anidados, en este buscamos comparar
-```{r}
-anova(mod_gam1, mod_gam2,mod_gam3, mod_gam4, test = 'F')
-```
+
+De la tabla anterior se concluye que el tercer modelo es posiblemente el candidat a elegir ya que es el que según su estadístico F presenta significancia respecto a los anteriores modelos.
 
 ```{r}
 errores1 <- predict(mod_gam1, Credit[test, c('Limit', 'Rating', 'Student', 'Education')])
@@ -186,14 +224,18 @@ errores3 <- mean((Credit[test, 'Balance'] - errores3)^2)
 errores4 <- mean((Credit[test, 'Balance'] - errores4)^2)
 ```
 
+Se construye una tabla anova del modelo elegido:
 ```{r}
-summary(mod_gam3)
+pander::pander(summary(mod_gam3)$anova)
 ```
 
+De la tabla anterior se observa que en el modelo a plantear el efecto de las variables númericas con suavizadores es significativo.
 
+Finalmente comparamos los errores en el conjunto de datos de prueba:
 ```{r}
-kable(data.frame(errores1, errores2, errores3, errores4))
+kable(data.frame(errores1, errores2, errores3, errores4),
+      col.names = c('Modelo1', 'Modelo2', 'Modelo3', 'Modelo4'))
 ```
 
-Según la validación cruzada el modelo que arroja el menor error en el conjunto de prueba es el modelo 3 en dónde se aplica loess la variable y splines a la variable en el conjunto de datos de prueba, esto posiblemente se deba a que al suavizar el conjunto de variables se mejore el ajuste sacrificando interpretabilidad en el conjunto de datos y que cómo se observa de manera gráfica.
+Según la validación cruzada el modelo que arroja el menor error en el conjunto de prueba es el modelo 3 en dónde se aplica loess al limite crediticio y splines al ratio crediticio en el conjunto de datos de prueba, esto posiblemente se deba a que al suavizar el conjunto de variables se mejore el ajuste sacrificando interpretabilidad y que cómo se observa de manera gráfica hayan diferencias en el balance crediticio respecto al estatus como estudiante de un individuo.
 
