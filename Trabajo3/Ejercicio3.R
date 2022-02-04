@@ -25,7 +25,7 @@ error_validacion1 <- sum(valores_validacion1!=oj[validacion,'Purchase'])/length(
 
 ##Tune
 set.seed(123)
-tune.out1 <- tune(svm, Purchase~., data=oj[entrenamiento,],kernel= "linear", ranges=list(cost=c(seq(0.001,10, by=0.1), 10)))
+tune.out1 <- tune(svm, Purchase~., data=oj[entrenamiento,],kernel= "linear", ranges=list(cost=c(seq(0.001,10, by=0.5), 10)))
 summary(tune.out1)
 
 mejor_modelo1 <- tune.out$best.model
@@ -66,7 +66,7 @@ valores_validacion2 <- predict(mejor_modelo2, newdata=oj[validacion,])
 error_entrenamiento2 <- sum(valores_entrenamiento!=oj[entrenamiento,'Purchase'])/length(entrenamiento)
 error_validacion2 <- sum(valores_validacion!=oj[validacion,'Purchase'])/length(validacion)
 
-##Ajuste clasificador de soporte vectorial polinomico
+##Ajuste maquina de soporte vectorial con kernel polinomial
 svm_3 <- svm(Purchase~., cost=0.1, scale=FALSE, kernel='polynomial', degree=2, subset=entrenamiento, data=oj)
 summary(svm_1)
 
@@ -77,9 +77,9 @@ valores_validacion3 <- predict(svm_3, newdata=oj[validacion,])
 
 error_entrenamiento3 <- sum(valores_entrenamiento3!=oj[entrenamiento,'Purchase'])/length(entrenamiento)
 error_validacion3 <- sum(valores_validacion3!=oj[validacion,'Purchase'])/length(validacion)
-##Tune
+##Tune utilizando varios ordenes de magnitud 
 set.seed(123)
-tune.out3 <- tune(svm, Purchase~., data=oj[entrenamiento,], scale=FALSE,  kernel='polynomial', degree=2,ranges=list(cost=c(seq(0.001,10, by=1), 10)))
+tune.out3 <- tune(svm, Purchase~., data=oj[entrenamiento,], scale=FALSE,  kernel='polynomial', degree=2, ranges=list(cost=c(0.01,0.1,1.0,5.0,10)))
 summary(tune.out)
 
 mejor_modelo3 <- tune.out3$best.model
